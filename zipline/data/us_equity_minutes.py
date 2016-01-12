@@ -203,6 +203,14 @@ class BcolzMinuteBarWriter(with_metaclass(ABCMeta)):
         close_col[dt_ixs] = df.close.values.astype(np.uint32)
         vol_col[dt_ixs] = df.volume.values.astype(np.uint32)
 
+        table.append([
+            open_col,
+            high_col,
+            low_col,
+            close_col,
+            vol_col
+        ])
+
     def _append_internal(self, directory, iterator, dates, sid_path_func=None):
         for asset, asset_df in iterator:
             if sid_path_func is None:
