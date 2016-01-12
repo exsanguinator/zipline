@@ -81,11 +81,24 @@ class BcolzMinuteBarWriter(with_metaclass(ABCMeta)):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    def frames_for_dates(self, assets, dates):
+        """
+        Return an iterator of pairs of (asset_id, pd.dataframe).
+        """
+        raise NotImplementedError()
+
     def write(self, directory, assets, sid_path_func=None):
         _iterator = self.gen_frames(assets)
 
         return self._write_internal(directory, _iterator,
                                     sid_path_func=sid_path_func)
+
+    def append(self, directory, assets, dates, sid_path_func=None):
+        _iterator = self.frames_for_dates(assets, dates)
+
+        return self._append_internal(directory, _iterator, dates,
+                                     sid_path_func=sid_path_func)
 
     def full_minutes_for_days(self, dt1, dt2):
         start_date = _writer_env.normalize_date(dt1)
@@ -172,6 +185,33 @@ class BcolzMinuteBarWriter(with_metaclass(ABCMeta)):
                 mode='w'
             )
 
+    def _append_day(self, table, date, df):
+        slots = MINUTES_PER_DAY
+        open_col = np.zeros(slots, dtype=np.uint32)
+        high_col = np.zeros(slots, dtype=np.uint32)
+        low_col = np.zeros(slots, dtype=np.uint32)
+        close_col = np.zeros(slots, dtype=np.uint32)
+        vol_col = np.zeros(slots, dtype=np.uint32)
+
+        minutes = _bcolz_minute_index([date])
+
+        dt_ixs = np.searchsorted(minutes.values, df.index.values)
+
+        open_col[dt_ixs] = df.open.values.astype(np.uint32)
+        high_col[dt_ixs] = df.high.values.astype(np.uint32)
+        low_col[dt_ixs] = df.low.values.astype(np.uint32)
+        close_col[dt_ixs] = df.close.values.astype(np.uint32)
+        vol_col[dt_ixs] = df.volume.values.astype(np.uint32)
+
+    def _append_internal(self, directory, iterator, dates, sid_path_func=None):
+        for asset, asset_df in iterator:
+            if sid_path_func is None:
+                path = join(directory, "{0}.bcolz".format(asset))
+            else:
+                path = sid_path_func(directory, asset)
+            table = ctable(rootdir=path)
+            for day, asset_day_df in dates:
+                self._append_day(table, day)
 
 class BcolzMinuteBarReader(object):
 
