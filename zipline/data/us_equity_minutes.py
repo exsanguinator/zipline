@@ -39,8 +39,6 @@ class BcolzMinuteBarReader(object):
             'low': {},
             'close': {},
             'volume': {},
-            'sid': {},
-            'dt': {},
         }
 
     def _get_metadata(self):
