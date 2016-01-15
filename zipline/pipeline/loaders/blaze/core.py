@@ -138,6 +138,7 @@ from datashape import (
     DateTime,
     Option,
     float64,
+    floating,
     isrecord,
     isscalar,
     promote,
@@ -858,7 +859,15 @@ class BlazeLoader(dict):
                 The query to run for the given column.
             """
             colname = column.name
-            filtered = e[e[colname].notnull() & (e[TS_FIELD_NAME] <= lower_dt)]
+            schema = e[colname].schema.measure
+            filter_ = e[TS_FIELD_NAME] <= lower_dt
+            if isinstance(schema, Option):
+                filter_ &= e[colname].notnull()
+                schema = schema.ty
+            if schema in floating:
+                filter_ &= ~e[colname].isnan()
+
+            filtered = e[filter_]
             lower = filtered.timestamp.max()
 
             if have_sids:
@@ -942,9 +951,10 @@ class BlazeLoader(dict):
         if have_sids:
             # Unstack by the sid so that we get a multi-index on the columns
             # of datacolumn, sid.
+            from nose.tools import set_trace;set_trace()
             sparse_output = sparse_output.set_index(
                 [TS_FIELD_NAME, SID_FIELD_NAME],
-            ).unstack()
+            )
             sparse_deltas = non_novel_deltas.set_index(
                 [TS_FIELD_NAME, SID_FIELD_NAME],
             ).unstack()
