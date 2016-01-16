@@ -222,14 +222,22 @@ def pre_setup():
     except ImportError:
         raise AssertionError("Zipline installation requires pip")
 
-    required = ('Cython', 'numpy')
-    for line in module_requirements('etc/requirements.txt', required):
+    for line in build_requires():
         pip.main(['install', line])
 
 
-pre_setup()
+def build_requires(conda_format=False):
+    return [req for req in read_requirements('etc/requirements.txt',
+                                             strict_bounds=True,
+                                             conda_format=conda_format)
+            if any(bld_req in req for bld_req in ('Cython', 'numpy'))]
+
 
 conda_build = os.path.basename(sys.argv[0]) == 'conda-build'
+
+if not conda_build:
+    pre_setup()
+
 
 setup(
     name='zipline',
@@ -259,5 +267,6 @@ setup(
     ],
     install_requires=install_requires(conda_format=conda_build),
     extras_require=extras_requires(conda_format=conda_build),
+    build_requires=build_requires(conda_format=conda_build),
     url="http://zipline.io",
 )
