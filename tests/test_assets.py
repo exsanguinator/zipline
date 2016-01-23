@@ -29,7 +29,7 @@ from pandas.tseries.tools import normalize_date
 from pandas.util.testing import assert_frame_equal
 
 from nose_parameterized import parameterized
-from numpy import full
+from numpy import full, int32, int64
 import sqlalchemy as sa
 
 from zipline.assets import (
@@ -39,7 +39,7 @@ from zipline.assets import (
     AssetFinder,
     AssetFinderCachedEquities,
 )
-from six import itervalues
+from six import itervalues, integer_types
 from toolz import valmap
 
 from zipline.assets.futures import (
@@ -212,6 +212,14 @@ class AssetTestCase(TestCase):
         self.assertEqual(s_23, s_23)
         self.assertEqual(s_23, 23)
         self.assertEqual(23, s_23)
+        self.assertEqual(int32(23), s_23)
+        self.assertEqual(int64(23), s_23)
+        self.assertEqual(s_23, int32(23))
+        self.assertEqual(s_23, int64(23))
+        # Check all int types (includes long on py2):
+        for int_type in integer_types:
+            self.assertEqual(int_type(23), s_23)
+            self.assertEqual(s_23, int_type(23))
 
         self.assertNotEqual(s_23, s_24)
         self.assertNotEqual(s_23, 24)
@@ -727,14 +735,14 @@ class AssetFinderTestCase(TestCase):
             0: {
                 'symbol': 'ADN15',
                 'root_symbol': 'AD',
-                'notice_date': pd.Timestamp('2015-05-14', tz='UTC'),
-                'expiration_date': pd.Timestamp('2015-06-14', tz='UTC'),
+                'notice_date': pd.Timestamp('2015-06-14', tz='UTC'),
+                'expiration_date': pd.Timestamp('2015-08-14', tz='UTC'),
                 'start_date': pd.Timestamp('2015-01-01', tz='UTC')
             },
             1: {
                 'symbol': 'ADV15',
                 'root_symbol': 'AD',
-                'notice_date': pd.Timestamp('2015-08-14', tz='UTC'),
+                'notice_date': pd.Timestamp('2015-05-14', tz='UTC'),
                 'expiration_date': pd.Timestamp('2015-09-14', tz='UTC'),
                 'start_date': pd.Timestamp('2015-01-01', tz='UTC')
             },
@@ -781,8 +789,8 @@ class AssetFinderTestCase(TestCase):
         # right order
         ad_contracts = finder.lookup_future_chain('AD', dt)
         self.assertEqual(len(ad_contracts), 6)
-        self.assertEqual(ad_contracts[0].sid, 0)
-        self.assertEqual(ad_contracts[1].sid, 1)
+        self.assertEqual(ad_contracts[0].sid, 1)
+        self.assertEqual(ad_contracts[1].sid, 0)
         self.assertEqual(ad_contracts[5].sid, 5)
 
         # Check that, when some contracts have expired, the chain has advanced
